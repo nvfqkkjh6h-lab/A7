@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>my text</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <!-- ナビゲーションバー -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <h1 class="logo">📖 my text</h1>
+      <div class="nav-links">
+        <button class="nav-item active" onclick="switchTab('home')">ホーム</button>
+        <button class="nav-item" onclick="switchTab('add')">問題追加</button>
+        <button class="nav-item" onclick="switchTab('review')">復習</button>
+        <button class="nav-item" onclick="switchTab('analytics')">分析</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+
+    <!-- ==================== TAB 1: HOME ==================== -->
+    <section id="tab-home" class="tab-content active">
+      
+      <!-- 目標設定エリア -->
+      <div class="goals-container">
+        <!-- 大目標 -->
+        <div class="apple-card main-goal-card">
+          <div class="goal-header">
+            <h3>🎯 大きな目標</h3>
+            <button class="btn btn-secondary btn-sm" onclick="toggleGoalEdit('main')">編集</button>
+          </div>
+          <p id="main-goal-display" class="goal-text">目標が設定されていません</p>
+          <div id="main-goal-edit" class="goal-edit-form" style="display:none;">
+            <input type="text" id="main-goal-input" class="apple-input" placeholder="例: 国家試験一発合格！">
+            <button class="btn btn-primary btn-sm" onclick="saveMainGoal()">保存</button>
+          </div>
+        </div>
+
+        <!-- ミニ目標（Apple Blueグラデーション） -->
+        <div class="apple-card mini-goal-card">
+          <div class="goal-header">
+            <h3>🔹 直近のミニ目標</h3>
+            <button class="btn btn-secondary btn-sm" style="color:#fff; background:rgba(255,255,255,0.2);" onclick="toggleGoalEdit('mini')">編集</button>
+          </div>
+          <div class="mini-goal-content">
+            <span id="mini-goal-date" class="mini-date-badge">期日未定</span>
+            <p id="mini-goal-display" class="goal-text">ミニ目標を設定しましょう</p>
+          </div>
+          <div id="mini-goal-edit" class="goal-edit-form" style="display:none; margin-top:10px;">
+            <input type="date" id="mini-goal-date-input" class="apple-input" style="margin-bottom:6px;">
+            <input type="text" id="mini-goal-text-input" class="apple-input" placeholder="例: 今週末までに呼吸器の過去問を完成！">
+            <button class="btn btn-primary btn-sm" style="background:#fff; color:#0071e3;" onclick="saveMiniGoal()">保存</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 検索・フィルターバー -->
+      <div class="apple-card search-card">
+        <div class="search-row">
+          <input type="text" id="search-input" class="apple-input" placeholder="問題タイトル・キーワードで検索..." oninput="renderQuestions()">
+          <select id="filter-subject" class="apple-input" onchange="renderQuestions()">
+            <option value="">すべての科目</option>
+          </select>
+          <select id="filter-folder" class="apple-input" onchange="renderQuestions()">
+            <option value="">すべてのフォルダ</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- 科目・サブジャンル ライブラリ（本・ファイル構造） -->
+      <div class="subject-folder-section apple-card" style="margin-bottom: 24px;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+          <h3 style="font-size:1.15rem; font-weight:600; letter-spacing:-0.01em;">📚 科目別ライブラリ</h3>
+          <button id="back-to-subjects-btn" class="btn btn-secondary btn-sm" style="display:none;" onclick="renderSubjectFolders()">← 科目一覧に戻る</button>
+        </div>
+        <div id="subject-folder-grid" class="folder-grid"></div>
+      </div>
+
+      <!-- 問題一覧リスト -->
+      <h3 style="margin-bottom: 14px; font-size:1.15rem; font-weight:600; letter-spacing:-0.01em;">📝 問題一覧</h3>
+      <div id="questions-list" class="card-grid"></div>
+    </section>
+
+    <!-- ==================== TAB 2: ADD QUESTION ==================== -->
+    <section id="tab-add" class="tab-content">
+      <div class="apple-card form-card">
+        <h2>問題の登録・編集</h2>
+        <form id="question-form" onsubmit="handleSaveQuestion(event)">
+          <input type="hidden" id="edit-id">
+
+          <div class="form-group">
+            <label>タイトル *</label>
+            <input type="text" id="q-title" class="apple-input" required placeholder="例: 呼吸器疾患の画像所見と初期対応">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>科目 *</label>
+              <input type="text" id="q-subject" class="apple-input" placeholder="例: 内科学" required>
+            </div>
+            <div class="form-group">
+              <label>サブジャンル (分野)</label>
+              <input type="text" id="q-field" class="apple-input" placeholder="例: 呼吸器">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>問題画像</label>
+            <input type="file" id="q-image-file" class="apple-input" accept="image/*" multiple onchange="handleImageUpload(event)">
+            <div id="image-preview" class="thumb-preview-container"></div>
+          </div>
+
+          <div class="form-group">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+              <label>問題文 (OCR結果 / 手入力)</label>
+              <button type="button" id="ocr-btn" class="btn btn-secondary btn-sm" onclick="runFastOCR()">⚡ 画像からテキスト読取 (OCR)</button>
+            </div>
+            <span id="ocr-status" style="font-size:0.8rem; color:#0071e3; display:block; margin-bottom:4px; font-weight:500;"></span>
+            <textarea id="q-ocr-text" class="apple-input" rows="4" placeholder="画像から自動読み取りされた文章、または手入力"></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>解答・メモ</label>
+            <textarea id="q-memo" class="apple-input" rows="4" placeholder="解説や暗記ポイントを自由に入力"></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>重要度・ラベル</label>
+              <select id="q-label" class="apple-input">
+                <option value="">なし</option>
+                <option value="必修">必修</option>
+                <option value="重要">重要</option>
+                <option value="応用">応用</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>タグ (カンマ区切り)</label>
+              <input type="text" id="q-tags" class="apple-input" placeholder="国試, 過去問">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>フォルダを選択</label>
+            <select id="q-folders" class="apple-input" multiple style="height:80px;"></select>
+          </div>
+
+          <div style="display:flex; gap:12px; margin-top:1.8rem;">
+            <button type="submit" class="btn btn-primary" style="flex:1;">保存する</button>
+            <button type="button" class="btn btn-secondary" onclick="resetForm(); switchTab('home');">キャンセル</button>
+          </div>
+        </form>
+      </div>
+    </section>
+
+    <!-- ==================== TAB 3: REVIEW ==================== -->
+    <section id="tab-review" class="tab-content">
+      <div class="apple-card">
+        <h2>復習モード</h2>
+        <div class="segment-control">
+          <button class="seg-btn active" onclick="filterReviewList('all', this)">すべて</button>
+          <button class="seg-btn" onclick="filterReviewList('due', this)">本日復習</button>
+          <button class="seg-btn" onclick="filterReviewList('incorrect', this)">苦手問題</button>
+          <button class="seg-btn" onclick="filterReviewList('bedtime', this)">寝る前</button>
+          <button class="seg-btn" onclick="filterReviewList('exam', this)">直前チェック</button>
+        </div>
+      </div>
+      <div id="review-list" class="card-grid" style="margin-top:20px;"></div>
+    </section>
+
+    <!-- ==================== TAB 4: ANALYTICS ==================== -->
+    <section id="tab-analytics" class="tab-content">
+      <div id="weakness-alert" class="alert-box" style="display:none;"></div>
+
+      <div class="apple-card chart-card">
+        <h3>科目別正答率 (%)</h3>
+        <div class="chart-container">
+          <canvas id="subjectChart"></canvas>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- ==================== MODAL: REVIEW ==================== -->
+  <div id="modal-review" class="modal-overlay" style="display:none;">
+    <div class="modal-card">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <h3 id="modal-q-title">問題</h3>
+        <button class="close-btn" onclick="closeReviewModal()">&times;</button>
+      </div>
+      <div id="modal-review-body" style="margin-top:15px;"></div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
